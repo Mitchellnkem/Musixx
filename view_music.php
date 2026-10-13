@@ -1,7 +1,8 @@
 <?php 
 require_once('./config.php');
-if(isset($_GET['id']) && $_GET['id'] > 0){
-    $qry = $conn->query("SELECT * from `music_list` where id = '{$_GET['id']}' and delete_flag = 0 ");
+if(isset($_GET['id']) && is_scalar($_GET['id']) && filter_var($_GET['id'], FILTER_VALIDATE_INT) !== false && (int) $_GET['id'] > 0){
+    $music_id = (int) $_GET['id'];
+    $qry = $conn->query("SELECT * from `music_list` where id = {$music_id} and delete_flag = 0 ");
     if($qry->num_rows > 0){
         foreach($qry->fetch_assoc() as $k => $v){
             $$k=$v;
@@ -42,29 +43,29 @@ if(isset($_GET['id']) && $_GET['id'] > 0){
     </div>
     <div class="form-group">
         <label for="title" class="control-label">Title:</label>
-        <div class="pl-4"><?= isset($title) ? $title : "" ?></div>
+        <div class="pl-4"><?= e($title ?? '') ?></div>
     </div>
     <div class="form-group">
         <label for="artist" class="control-label">Artist</label>
-        <div class="pl-4"><?= isset($artist) ? $artist : "" ?></div>
+        <div class="pl-4"><?= e($artist ?? '') ?></div>
     </div>
     <div class="form-group">
         <label for="category_id" class="control-label">Category</label>
-        <div class="pl-4"><?= isset($category_name) ? $category_name : "" ?></div>
+        <div class="pl-4"><?= e($category_name ?? '') ?></div>
     </div>
     <div class="form-group">
         <label for="description" class="control-label">Description</label>
-        <div class="pl-4"><?= isset($description) ? str_replace("\n", "<br>", html_entity_decode($description)) : "" ?></div>
+        <div class="pl-4"><?= isset($description) ? nl2br(e(html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) : "" ?></div>
     </div>
     
     <div class="form-group">
         <label for="" class="control-label">Audio File</label>
         <?php if(isset($audio_path) && !empty($audio_path)): ?>
             <div class="pl-4">
-                <audio src="<?= base_url.$audio_path ?>" controls></audio>
+            <audio src="<?= e(base_url.$audio_path) ?>" controls></audio>
             </div>
             <div class="pl-4">
-                <a href="<?= base_url.$audio_path ?>" target="_blank"><?= (pathinfo($audio_path, PATHINFO_FILENAME)).".".(pathinfo($audio_path, PATHINFO_EXTENSION))  ?></a>
+                <a href="<?= e(base_url.$audio_path) ?>" target="_blank" rel="noopener noreferrer"><?= e(pathinfo($audio_path, PATHINFO_FILENAME).".".pathinfo($audio_path, PATHINFO_EXTENSION)) ?></a>
 
             </div>
         <?php else: ?>

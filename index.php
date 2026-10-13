@@ -11,7 +11,16 @@
       alert_toast("<?php echo $_settings->flashdata('success') ?>",'success')
     </script>
     <?php endif;?>      
-     <?php $page = isset($_GET['page']) ? $_GET['page'] : 'home';  ?>
+     <?php
+        // Only route to known application pages; never use a request value as a filesystem path.
+        $routes = [
+          'home' => 'home.php',
+          'categories' => 'categories.php',
+          'music_list' => 'music_list.php',
+          'about' => 'about.php',
+        ];
+        $page = isset($_GET['page']) && is_string($_GET['page']) ? $_GET['page'] : 'home';
+     ?>
       <!-- Content Wrapper. Contains page content -->
       <div class="content-wrapper  pt-3" style="min-height: 567.854px;">
      
@@ -19,14 +28,10 @@
         <section class="content">
           <div class="container container-md-fluid container-sm-fluid">
             <?php 
-              if(!file_exists($page.".php") && !is_dir($page)){
+              if(!isset($routes[$page])){
                   include '404.html';
               }else{
-                if(is_dir($page))
-                  include $page.'/index.php';
-                else
-                  include $page.'.php';
-
+                include $routes[$page];
               }
             ?>
           </div>

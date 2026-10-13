@@ -1,8 +1,9 @@
 <?php 
 $page_title = "Music List";
 $page_description = "";
-if(isset($_GET['cid'])){
-    $cat_qry = $conn->query("SELECT * FROM `category_list` where `id` = '{$_GET['cid']}' and `delete_flag` = 0 and `status` = 1 ");
+if(isset($_GET['cid']) && is_scalar($_GET['cid']) && filter_var($_GET['cid'], FILTER_VALIDATE_INT) !== false){
+    $requested_category_id = (int) $_GET['cid'];
+    $cat_qry = $conn->query("SELECT * FROM `category_list` where `id` = {$requested_category_id} and `delete_flag` = 0 and `status` = 1 ");
     if($cat_qry->num_rows > 0){
         $result = $cat_qry->fetch_assoc();
         $category_id = $result['id'];
@@ -103,13 +104,13 @@ if(isset($_GET['cid'])){
 </style>
 <div class="row">
     <div class="col-lg-6 col-md-8 col-sm-12 col-xs-12 mx-auto mt-5 mb-3 ">
-        <h1 class="text-center font-weight-bolder title-font"><?= $page_title ?></h1>
+        <h1 class="text-center font-weight-bolder title-font"><?= e($page_title) ?></h1>
         <hr class="mx-auto bg-primary opacity-100" style="height:2px;opacity:1;width:20%">
         <?php if(!empty($page_description)): ?>
             <card class="rounded-0 shadow">
                 <div class="card-body rounded-0">
                     <div class="container-fluid">
-                        <div class="text-muted"><em><?= $page_description ?></em></div>
+                        <div class="text-muted"><em><?= nl2br(e(html_entity_decode($page_description, ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?></em></div>
                     </div>
                 </div>
             </card>
@@ -133,7 +134,7 @@ if(isset($_GET['cid'])){
             <?php 
             $where = "";
             if(isset($category_id)){
-                $where = "and `category_id` = '{$category_id}' ";
+                $where = "and `category_id` = " . (int) $category_id . " ";
             }
             $music_list = $conn->query("SELECT *, COALESCE((SELECT `name` FROM `category_list` where `music_list`.`category_id` = `category_list`.`id`), 'Unkown Category') as `category_name` FROM `music_list` where `status` = 1 and `delete_flag` = 0 and `audio_path` != ''  {$where} order by `title` asc");
             while($row = $music_list->fetch_assoc()):
@@ -141,16 +142,16 @@ if(isset($_GET['cid'])){
             <div class="col-lg-4 col-md-6 col-sm-12 col-xs-12 mb-3 cat-items">
                 <div class="card rounded-0 card-outline card-primary  h-100">
                     <div class="card-img-top music-banner">
-                        <img src="<?= validate_image($row['banner_path']) ?>" alt="<?= $row['title'] ?>">
+                        <img src="<?= e(validate_image($row['banner_path'])) ?>" alt="<?= e($row['title']) ?>">
                     </div>
                     <div class="card-body rounded-0">
                         <div class="container-fluid">
                             <div>
-                                <h2 class="rounded-0 card-title-font text-center w-100"><b><?= $row['title'] ?></b></h2>
+                                <h2 class="rounded-0 card-title-font text-center w-100"><b><?= e($row['title']) ?></b></h2>
                             </div>
                             <div>
                                 <div class="truncate">
-                                    <?= str_replace("\n", "<br>", html_entity_decode($row['description'])) ?>
+                                    <?= nl2br(e(html_entity_decode($row['description'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?>
                                 </div>
                             </div>
                             
@@ -158,9 +159,9 @@ if(isset($_GET['cid'])){
                     </div>
                     <div class="card-footer text-right">
                         <div class="row justify-content-end">
-                            <a href="<?= base_url.$row['audio_path'] ?>" download="<?= $row['title'].".".(pathinfo($row['audio_path'], PATHINFO_EXTENSION)) ?>" class="btn btn-sm btn-outline-success rounded-circle p-0 music-btns"><i class="fa fa-download"></i></a>
-                            <a href="javascript:void(0)" data-id="<?= $row['id'] ?>" class="btn btn-sm btn-outline-primary rounded-circle p-0 music-btns play_music"><i class="fa fa-play"></i></a>
-                            <a href="javascript:void(0)" data-id="<?= $row['id'] ?>" class="btn btn-sm btn-outline-info rounded-circle p-0 music-btns view_music_details"><i class="fa fa-info"></i></a>
+                            <a href="<?= e(base_url.$row['audio_path']) ?>" download="<?= e($row['title'].".".(pathinfo($row['audio_path'], PATHINFO_EXTENSION))) ?>" class="btn btn-sm btn-outline-success rounded-circle p-0 music-btns"><i class="fa fa-download"></i></a>
+                            <a href="javascript:void(0)" data-id="<?= (int) $row['id'] ?>" class="btn btn-sm btn-outline-primary rounded-circle p-0 music-btns play_music"><i class="fa fa-play"></i></a>
+                            <a href="javascript:void(0)" data-id="<?= (int) $row['id'] ?>" class="btn btn-sm btn-outline-info rounded-circle p-0 music-btns view_music_details"><i class="fa fa-info"></i></a>
                         </div>
                     </div>
                 </div>
@@ -223,7 +224,7 @@ if(isset($_GET['cid'])){
         $('.view_music_details').click(function(e){
             e.preventDefault()
             var id = $(this).attr('data-id')
-            uni_modal("Music Details", "<?= base_url."view_music_details.php?id=" ?>"+id,"modal-large")
+            uni_modal("Music Details", "<?= base_url."view_music.php?id=" ?>"+encodeURIComponent(id),"modal-large")
         })
 
         $('.play_music').click(function(e){
@@ -266,24 +267,26 @@ if(isset($_GET['cid'])){
         })
     })
     function loadSong(song) {
-        var dur = 0;
+        disc.pause();
+        disc.currentTime = 0;
         banner_img.src = song.coverPath;
         disc.src = song.discPath;
         title.textContent = song.title;
         artist.textContent = song.artist;
-        disc.addEventListener('canplaythrough', function() {
-            dur = disc.duration
-            mins = Math.floor(Math.abs(dur / 60))
-            mins = String(mins).padStart('2', 0)
-            sec = Math.floor(dur - (parseInt(mins) * 60))
-            sec = String(sec).padStart('2', 0)
-            duration.textContent = `${mins}:${sec}`
-        })
-        playPauseMedia()
+        disc.addEventListener('loadedmetadata', function updateDuration() {
+            duration.textContent = formatTime(disc.duration);
+        }, { once: true });
+        disc.play().catch(function(error) {
+            console.error('Audio playback could not start:', error);
+            updatePlayPauseIcon();
+        });
     }
     function playPauseMedia() {
         if (disc.paused) {
-            disc.play();
+            disc.play().catch(function(error) {
+                console.error('Audio playback could not start:', error);
+                updatePlayPauseIcon();
+            });
         } else {
             disc.pause();
         }
@@ -302,14 +305,16 @@ if(isset($_GET['cid'])){
 
     // Update progress bar
     function updateProgress() {
+        if (!Number.isFinite(disc.duration) || disc.duration <= 0) return;
         progress.style.width = (disc.currentTime / disc.duration) * 100 + '%';
+        timer.textContent = formatTime(disc.currentTime);
+    }
 
-        let minutes = Math.floor(disc.currentTime / 60);
-        let seconds = Math.floor(disc.currentTime % 60);
-        if (seconds < 10) {
-            seconds = '0' + seconds;
-        }
-        timer.textContent = `${minutes}:${seconds}`;
+    function formatTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
     }
 
     // Reset the progress
@@ -319,13 +324,14 @@ if(isset($_GET['cid'])){
     }
     // Navigate song slider
 function progressSlider(ev) {
+    if (!Number.isFinite(disc.duration) || disc.duration <= 0 || this.clientWidth <= 0) return;
     var is_playing = !disc.paused
     if (is_playing)
         disc.pause()
     const totalWidth = this.clientWidth;
     const clickWidth = ev.offsetX;
     const clickWidthRatio = clickWidth / totalWidth;
-    disc.currentTime = clickWidthRatio * disc.duration;
+    disc.currentTime = Math.max(0, Math.min(1, clickWidthRatio)) * disc.duration;
     if (is_playing)
         disc.play()
     document.addEventListener('mousemove', slideMoving);
@@ -354,13 +360,14 @@ function change_volume($dir = "down"){
 
     // Navigate song slider while moving
     function slideMoving(ev) {
+        if (!Number.isFinite(disc.duration) || disc.duration <= 0 || progressContainer.clientWidth <= 0) return;
         var is_playing = !disc.paused
         if (is_playing)
             disc.pause()
         const totalWidth = progressContainer.clientWidth;
         const clickWidth = ev.offsetX;
         const clickWidthRatio = clickWidth / totalWidth;
-        disc.currentTime = clickWidthRatio * disc.duration;
+        disc.currentTime = Math.max(0, Math.min(1, clickWidthRatio)) * disc.duration;
         if (is_playing)
             disc.play()
     }

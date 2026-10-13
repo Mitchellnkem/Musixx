@@ -26,12 +26,12 @@
             <div class="col-lg-4 col-md-6 col-sm-12 col-xs-12 mb-3 cat-items">
                 <div class="card rounded-0 card-outline card-primary  h-100">
                     <div class="card-header rounded-0">
-                        <div class="card-title rounded-0 card-title-font"><b><?= $row['name'] ?></b></div>
+                        <div class="card-title rounded-0 card-title-font"><b><?= e($row['name']) ?></b></div>
                     </div>
                     <div class="card-body rounded-0">
                         <div class="container-fluid">
                             <div class=" truncate">
-                                <?= str_replace("\n", "<br>", html_entity_decode($row['description'])) ?>
+                                <?= nl2br(e(html_entity_decode($row['description'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?>
                             </div>
                             
                         </div>
