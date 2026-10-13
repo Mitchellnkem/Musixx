@@ -9,6 +9,7 @@ require_once('classes/DBConnection.php');
 require_once('classes/SystemSettings.php');
 $db = new DBConnection;
 $conn = $db->conn;
+$_settings = new SystemSettings($conn);
 function redirect($url=''){
 	if(!empty($url)){
 		$target = base_url . ltrim((string) $url, '/');

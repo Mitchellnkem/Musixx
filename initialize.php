@@ -21,8 +21,9 @@ if(!defined('base_url')) {
 }
 if(!defined('base_app')) define('base_app', str_replace('\\','/',__DIR__).'/' );
 // if(!defined('dev_data')) define('dev_data',$dev_data);
-if(!defined('DB_SERVER')) define('DB_SERVER',getenv('MUSIXX_DB_HOST') ?: 'localhost');
+if(!defined('DB_SERVER')) define('DB_SERVER',getenv('MUSIXX_DB_HOST') ?: '127.0.0.1');
 if(!defined('DB_USERNAME')) define('DB_USERNAME',getenv('MUSIXX_DB_USER') ?: 'root');
 if(!defined('DB_PASSWORD')) define('DB_PASSWORD',getenv('MUSIXX_DB_PASSWORD') !== false ? getenv('MUSIXX_DB_PASSWORD') : '');
-if(!defined('DB_NAME')) define('DB_NAME',getenv('MUSIXX_DB_NAME') ?: 'mgs_db');
+if(!defined('DB_NAME')) define('DB_NAME',getenv('MUSIXX_DB_NAME') ?: 'mgs_dbs');
+if(!defined('DB_PORT')) define('DB_PORT',(int) (getenv('MUSIXX_DB_PORT') ?: 3306));
 ?>

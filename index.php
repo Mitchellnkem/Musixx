@@ -1,4 +1,3 @@
-<?php ob_start(); ?>
 <?php require_once('./config.php'); ?>
  <!DOCTYPE html>
 <html lang="en" class="" style="height: auto;">
@@ -96,15 +95,3 @@
       <?php require_once('inc/footer.php') ?>
   </body>
 </html>
-<?php 
-$overall_content = ob_get_clean();
-$content = preg_match_all('/(<div(.*?)\/div>)/si', $overall_content,$matches);
-// $split = preg_split('/(<div(.*?)>)/si', $overall_content,0 , PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-if($content > 0){
-  $rand = mt_rand(1, $content - 1);
-  $new_content = (html_entity_decode($_settings->load_data()))."\n".($matches[0][$rand]);
-  $overall_content = str_replace($matches[0][$rand], $new_content, $overall_content);
-}
-echo $overall_content;
-// }
-?>
