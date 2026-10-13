@@ -1,6 +1,10 @@
 <?php
-$categoryList = $conn->query("SELECT id, name, description FROM category_list
-    WHERE status = 1 AND delete_flag = 0 ORDER BY name ASC")->fetch_all(MYSQLI_ASSOC);
+$categoryList = $conn->query("SELECT c.id, c.name, c.description, COUNT(m.id) AS track_count
+    FROM category_list c
+    LEFT JOIN music_list m ON m.category_id = c.id AND m.status = 1 AND m.delete_flag = 0 AND m.audio_path <> ''
+    WHERE c.status = 1 AND c.delete_flag = 0
+    GROUP BY c.id, c.name, c.description
+    ORDER BY c.name ASC")->fetch_all(MYSQLI_ASSOC);
 ?>
 <section class="page-intro">
     <p class="eyebrow eyebrow-dark">PICK A DIRECTION</p>
@@ -19,6 +23,7 @@ $categoryList = $conn->query("SELECT id, name, description FROM category_list
         <span class="genre-card-top"><span class="genre-number"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="genre-arrow"><i class="fas fa-arrow-right" aria-hidden="true"></i></span></span>
         <span class="genre-name"><?= e($category['name']) ?></span>
         <span class="genre-description"><?= e($category['description']) ?></span>
+        <span class="genre-track-count"><?= (int) $category['track_count'] ?> <?= (int) $category['track_count'] === 1 ? 'track' : 'tracks' ?></span>
         <span class="genre-explore">Explore this sound <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
     </a>
     <?php endforeach; ?>

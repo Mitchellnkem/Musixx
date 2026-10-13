@@ -11,12 +11,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const playerArt = document.getElementById('player-art');
     const previousButton = document.getElementById('player-previous');
     const nextButton = document.getElementById('player-next');
+    const equalizerToggle = document.getElementById('equalizer-toggle');
+    const equalizerPanel = document.getElementById('equalizer-panel');
+    const equalizerEnabled = document.getElementById('equalizer-enabled');
+    const equalizerPreset = document.getElementById('equalizer-preset');
+    const equalizerStatus = document.getElementById('equalizer-status');
+    const equalizerSliders = Array.from(document.querySelectorAll('[data-eq-band]'));
     const baseUrl = audio.dataset.baseUrl || '/';
     let activeTrackUrl = '';
     let queue = [];
     let queueIndex = -1;
     const favoriteKey = 'musixx.favorites.v1';
     const recentKey = 'musixx.recent.v1';
+    const equalizerKey = 'musixx.equalizer.v1';
+    const frequencies = [60, 250, 1000, 4000, 12000];
+    const presets = {
+        flat: [0, 0, 0, 0, 0],
+        bass: [7, 5, 1, 0, 2],
+        vocal: [-2, 0, 4, 3, 1],
+        treble: [-2, -1, 0, 4, 7]
+    };
+    let audioContext = null;
+    let equalizerFilters = [];
+    let equalizerGraphReady = false;
 
     function readStorage(key) {
         try { const value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value : []; }
@@ -26,6 +43,82 @@ document.addEventListener('DOMContentLoaded', function () {
     function writeStorage(key, value) {
         try { localStorage.setItem(key, JSON.stringify(value)); } catch (error) { /* Storage can be unavailable in private mode. */ }
     }
+
+    function getEqualizerSettings() {
+        try {
+            const stored = JSON.parse(localStorage.getItem(equalizerKey) || '{}');
+            return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+        } catch (error) { return {}; }
+    }
+
+    function syncEqualizer() {
+        const enabled = equalizerEnabled.checked;
+        equalizerFilters.forEach(function (filter, index) {
+            filter.gain.value = enabled ? Number(equalizerSliders[index].value) : 0;
+        });
+        equalizerSliders.forEach(function (slider) {
+            const output = slider.parentElement.querySelector('output');
+            if (output) output.textContent = `${Number(slider.value) > 0 ? '+' : ''}${slider.value} dB`;
+            slider.disabled = !enabled;
+        });
+    }
+
+    function saveEqualizerSettings() {
+        writeStorage(equalizerKey, {
+            enabled: equalizerEnabled.checked,
+            gains: equalizerSliders.map(function (slider) { return Number(slider.value); }),
+            preset: equalizerPreset.value
+        });
+    }
+
+    function applyEqualizerPreset(name) {
+        const values = presets[name];
+        if (!values) return;
+        equalizerSliders.forEach(function (slider, index) { slider.value = String(values[index]); });
+        equalizerPreset.value = name;
+        syncEqualizer();
+        saveEqualizerSettings();
+    }
+
+    function ensureEqualizerGraph() {
+        if (equalizerGraphReady) return true;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+            if (equalizerStatus) equalizerStatus.textContent = 'Equalizer is not supported by this browser.';
+            return false;
+        }
+        try {
+            audioContext = new AudioContextClass();
+            const source = audioContext.createMediaElementSource(audio);
+            equalizerFilters = frequencies.map(function (frequency, index) {
+                const filter = audioContext.createBiquadFilter();
+                filter.frequency.value = frequency;
+                filter.type = index === 0 ? 'lowshelf' : (index === frequencies.length - 1 ? 'highshelf' : 'peaking');
+                if (filter.type === 'peaking') filter.Q.value = 1;
+                return filter;
+            });
+            source.connect(equalizerFilters[0]);
+            equalizerFilters.forEach(function (filter, index) {
+                filter.connect(equalizerFilters[index + 1] || audioContext.destination);
+            });
+            equalizerGraphReady = true;
+            syncEqualizer();
+            return true;
+        } catch (error) {
+            if (equalizerStatus) equalizerStatus.textContent = 'Could not initialize audio controls in this browser.';
+            console.error('Equalizer initialization failed:', error);
+            return false;
+        }
+    }
+
+    const savedEqualizer = getEqualizerSettings();
+    if (Array.isArray(savedEqualizer.gains)) {
+        equalizerSliders.forEach(function (slider, index) {
+            if (Number.isFinite(Number(savedEqualizer.gains[index]))) slider.value = String(Math.max(-12, Math.min(12, Number(savedEqualizer.gains[index]))));
+        });
+        equalizerPreset.value = presets[savedEqualizer.preset] ? savedEqualizer.preset : 'custom';
+    }
+    if (typeof savedEqualizer.enabled === 'boolean') equalizerEnabled.checked = savedEqualizer.enabled;
 
     let favorites = readStorage(favoriteKey).map(String);
 
@@ -155,6 +248,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
+            ensureEqualizerGraph();
+            if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
             await audio.play();
         } catch (error) {
             playerTitle.textContent = 'Playback could not start';
@@ -187,6 +282,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     if (previousButton) previousButton.addEventListener('click', function () { playQueueItem(queueIndex - 1); });
     if (nextButton) nextButton.addEventListener('click', function () { playQueueItem(queueIndex + 1); });
+
+    equalizerToggle.addEventListener('click', function () {
+        const isOpen = equalizerPanel.hidden;
+        equalizerPanel.hidden = !isOpen;
+        equalizerToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+    equalizerEnabled.addEventListener('change', function () {
+        ensureEqualizerGraph(); syncEqualizer(); saveEqualizerSettings();
+    });
+    equalizerPreset.addEventListener('change', function () {
+        if (equalizerPreset.value === 'custom') return;
+        applyEqualizerPreset(equalizerPreset.value);
+    });
+    equalizerSliders.forEach(function (slider) {
+        slider.addEventListener('input', function () {
+            equalizerPreset.value = 'custom';
+            ensureEqualizerGraph(); syncEqualizer(); saveEqualizerSettings();
+        });
+    });
+    syncEqualizer();
 
     playButton.addEventListener('click', function () {
         if (!activeTrackUrl) return;

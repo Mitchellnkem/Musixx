@@ -4,9 +4,13 @@ $featuredTracks = $conn->query("SELECT m.id, m.title, m.artist, m.banner_path, m
     FROM music_list m
     LEFT JOIN category_list c ON c.id = m.category_id
     WHERE m.status = 1 AND m.delete_flag = 0 AND m.audio_path <> ''
-    ORDER BY m.created_at DESC, m.id DESC LIMIT 4")->fetch_all(MYSQLI_ASSOC);
-$featuredCategories = $conn->query("SELECT id, name, description FROM category_list
-    WHERE status = 1 AND delete_flag = 0 ORDER BY name ASC LIMIT 6")->fetch_all(MYSQLI_ASSOC);
+    ORDER BY m.created_at DESC, m.id DESC")->fetch_all(MYSQLI_ASSOC);
+$featuredCategories = $conn->query("SELECT c.id, c.name, c.description, COUNT(m.id) AS track_count
+    FROM category_list c
+    LEFT JOIN music_list m ON m.category_id = c.id AND m.status = 1 AND m.delete_flag = 0 AND m.audio_path <> ''
+    WHERE c.status = 1 AND c.delete_flag = 0
+    GROUP BY c.id, c.name, c.description
+    ORDER BY c.name ASC")->fetch_all(MYSQLI_ASSOC);
 $trackCount = (int) $conn->query("SELECT COUNT(*) AS total FROM music_list WHERE status = 1 AND delete_flag = 0 AND audio_path <> ''")->fetch_assoc()['total'];
 $categoryCount = (int) $conn->query("SELECT COUNT(*) AS total FROM category_list WHERE status = 1 AND delete_flag = 0")->fetch_assoc()['total'];
 $heroTrack = $featuredTracks[0] ?? null;
@@ -63,7 +67,7 @@ $heroImage = $heroTrack ? validate_image($heroTrack['banner_path']) : validate_i
     <?php if ($featuredCategories): ?>
     <div class="genre-grid">
         <?php foreach ($featuredCategories as $category): ?>
-        <a class="genre-card" href="<?= e(base_url.'?page=music_list&cid='.(int) $category['id']) ?>"><span class="genre-arrow"><i class="fas fa-arrow-right" aria-hidden="true"></i></span><span class="genre-name"><?= e($category['name']) ?></span><span class="genre-description"><?= e($category['description']) ?></span></a>
+        <a class="genre-card" href="<?= e(base_url.'?page=music_list&cid='.(int) $category['id']) ?>"><span class="genre-arrow"><i class="fas fa-arrow-right" aria-hidden="true"></i></span><span class="genre-name"><?= e($category['name']) ?></span><span class="genre-description"><?= e($category['description']) ?></span><span class="genre-track-count"><?= (int) $category['track_count'] ?> <?= (int) $category['track_count'] === 1 ? 'track' : 'tracks' ?></span></a>
         <?php endforeach; ?>
     </div>
     <?php else: ?><p class="muted-light">Genres are being tuned. Check back soon.</p><?php endif; ?>

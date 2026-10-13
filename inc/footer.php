@@ -39,7 +39,20 @@
         <i class="fas fa-volume-up" aria-hidden="true"></i>
         <input id="player-volume" type="range" min="0" max="1" step="0.01" value="0.72" aria-label="Volume">
     </div>
+    <button type="button" class="equalizer-toggle" id="equalizer-toggle" aria-expanded="false" aria-controls="equalizer-panel"><i class="fas fa-sliders-h" aria-hidden="true"></i><span>EQ</span></button>
     <button type="button" class="player-close" id="player-close" aria-label="Close player"><i class="fas fa-times" aria-hidden="true"></i></button>
+    <section class="equalizer-panel" id="equalizer-panel" aria-label="Equalizer controls" hidden>
+        <div class="equalizer-heading"><div><span class="player-kicker">SOUND SHAPING</span><h2>Equalizer</h2></div><label class="equalizer-switch"><input type="checkbox" id="equalizer-enabled" checked><span>On</span></label></div>
+        <label class="equalizer-preset">Preset<select id="equalizer-preset"><option value="custom">Custom</option><option value="flat">Flat</option><option value="bass">Bass boost</option><option value="vocal">Vocal</option><option value="treble">Treble boost</option></select></label>
+        <div class="equalizer-bands">
+            <label><span>60 Hz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="0" aria-label="60 hertz equalizer band"><output>0 dB</output></label>
+            <label><span>250 Hz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="1" aria-label="250 hertz equalizer band"><output>0 dB</output></label>
+            <label><span>1 kHz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="2" aria-label="1 kilohertz equalizer band"><output>0 dB</output></label>
+            <label><span>4 kHz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="3" aria-label="4 kilohertz equalizer band"><output>0 dB</output></label>
+            <label><span>12 kHz</span><input type="range" min="-12" max="12" step="1" value="0" data-eq-band="4" aria-label="12 kilohertz equalizer band"><output>0 dB</output></label>
+        </div>
+        <p class="equalizer-status" id="equalizer-status" role="status">Adjust each band from −12 to +12 dB.</p>
+    </section>
 </section>
 <audio id="site-audio" preload="metadata" data-base-url="<?= e(base_url) ?>"></audio>
 
