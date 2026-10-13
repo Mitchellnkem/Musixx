@@ -1,388 +1,45 @@
-<?php 
-$page_title = "Music List";
-$page_description = "";
-if(isset($_GET['cid']) && is_scalar($_GET['cid']) && filter_var($_GET['cid'], FILTER_VALIDATE_INT) !== false){
-    $requested_category_id = (int) $_GET['cid'];
-    $cat_qry = $conn->query("SELECT * FROM `category_list` where `id` = {$requested_category_id} and `delete_flag` = 0 and `status` = 1 ");
-    if($cat_qry->num_rows > 0){
-        $result = $cat_qry->fetch_assoc();
-        $category_id = $result['id'];
-        $page_title = $result['name'];
-        $page_description = $result['description'];
-    }
+<?php
+$selectedCategory = null;
+$categoryWasRequested = array_key_exists('cid', $_GET);
+if ($categoryWasRequested && is_scalar($_GET['cid']) && filter_var($_GET['cid'], FILTER_VALIDATE_INT) !== false) {
+    $categoryId = (int) $_GET['cid'];
+    $categoryResult = $conn->query("SELECT id, name, description FROM category_list
+        WHERE id = {$categoryId} AND status = 1 AND delete_flag = 0 LIMIT 1");
+    $selectedCategory = $categoryResult->fetch_assoc() ?: null;
 }
 
+$musicSql = "SELECT m.id, m.title, m.artist, m.description, m.banner_path, m.audio_path,
+        COALESCE(c.name, 'Independent') AS category_name
+    FROM music_list m
+    LEFT JOIN category_list c ON c.id = m.category_id
+    WHERE m.status = 1 AND m.delete_flag = 0 AND m.audio_path <> ''";
+if ($selectedCategory) {
+    $musicSql .= ' AND m.category_id = ' . (int) $selectedCategory['id'];
+}
+$musicSql .= ' ORDER BY m.title ASC, m.id ASC';
+$musicTracks = $conn->query($musicSql)->fetch_all(MYSQLI_ASSOC);
+$listTitle = $selectedCategory ? $selectedCategory['name'] : ($categoryWasRequested ? 'Genre not found' : 'The collection');
 ?>
+<section class="page-intro music-intro">
+    <p class="eyebrow eyebrow-dark">THE MUSIXX COLLECTION</p>
+    <div class="page-intro-row"><div><h1><?= e($listTitle) ?><?php if (!$categoryWasRequested): ?> <em>sounds good.</em><?php endif; ?></h1><p><?= $selectedCategory && $selectedCategory['description'] !== '' ? e($selectedCategory['description']) : 'A small collection of sounds for every kind of moment.' ?></p></div><span class="intro-count"><?= count($musicTracks) ?><small>tracks</small></span></div>
+</section>
 
-<style>
-    .music-banner{
-        width: 100%;
-        height: 35vh;
-        overflow:auto;
-        background: #000;
-    }
-    .music-banner img{
-        width: 100%;
-        height: 100%;
-        object-fit:scale-down;
-        object-position:center center;
-    }
-    .music-btns{
-        padding:0;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        height:1.5em;
-        width:1.5em;
-        font-size:.5em;
-        margin: 0 .5em;
-    }
-    #player-field{
-        display:none;
-        position:fixed;
-        bottom:0;
-        left:0;
-        min-height:5em;
-        width: 100%;
-        background:#000;
-        justify-content:center;
-        align-items:center;
-    }
-    #player-slider{
-        width:50%;
-        line-height:.8em;
-        padding:.5em;
-    }
-    #progress-container {
-        height: 7px;
-        width: 100%;
-        background-color: rgb(255 255 255 / 33%);
-        margin: .5em;
-        cursor: pointer;
-        border-radius: 8px;
-    }
+<?php if (!$categoryWasRequested || $selectedCategory): ?>
+<section class="browse-tools" aria-label="Find music">
+    <label class="search-box"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="track-search" placeholder="Search tracks, artists, genres" aria-label="Search tracks"><kbd>/</kbd></label>
+    <div class="browse-tools-right"><span class="results-caption" id="track-results"><?= count($musicTracks) ?> <?= count($musicTracks) === 1 ? 'track' : 'tracks' ?></span><a class="text-link" href="<?= e(base_url) ?>?page=categories">All genres <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+</section>
 
-    #progress {
-        background-color: #d9c9c9;
-        width: 0%;
-        height: inherit;
-        border-radius: inherit;
-        transition: width 100ms ease-in;
-    }
-
-    #timer-bar {
-        display: flex;
-        justify-content: space-between;
-        font-size: 1rem;
-    }
-    button.play-btn {
-        height: 2.35em;
-        width: 2.5em;
-        border-radius: 50% 50%;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    #player-img-holder {
-        position: relative;
-        width: 12vw;
-        height: 13vh;
-    }
-    #player-img-holder img {
-        position: absolute;
-        bottom: 0;
-        height: 100%;
-        width: 100%;
-        object-fit: scale-down;
-        object-position: center center;
-        background: #000;
-    }
-    .music-btns i {
-        font-size: .7em;
-    }
-</style>
-<div class="row">
-    <div class="col-lg-6 col-md-8 col-sm-12 col-xs-12 mx-auto mt-5 mb-3 ">
-        <h1 class="text-center font-weight-bolder title-font"><?= e($page_title) ?></h1>
-        <hr class="mx-auto bg-primary opacity-100" style="height:2px;opacity:1;width:20%">
-        <?php if(!empty($page_description)): ?>
-            <card class="rounded-0 shadow">
-                <div class="card-body rounded-0">
-                    <div class="container-fluid">
-                        <div class="text-muted"><em><?= nl2br(e(html_entity_decode($page_description, ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?></em></div>
-                    </div>
-                </div>
-            </card>
-        <?php endif; ?>
-    </div>
+<?php if ($musicTracks): ?>
+<div class="track-grid collection-grid" id="track-grid">
+    <?php foreach ($musicTracks as $index => $track): include 'inc/trackCard.php'; ?>
+    <?php endforeach; ?>
 </div>
-
-<div class="row">
-    <div class="col-lg-6 col-md-8 col-sm-12 col-xs-12 mx-auto mb-5">
-        <div class="input-group mb-3">
-            <input type="search" id="search_cat"  placeholder="Search Here"  class="form-control">
-            <div class="input-group-append">
-                <span class="input-group-text"><i class="fas fa-search"></i></span>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mx-auto mb-5">
-        <div class="row">
-            <?php 
-            $where = "";
-            if(isset($category_id)){
-                $where = "and `category_id` = " . (int) $category_id . " ";
-            }
-            $music_list = $conn->query("SELECT *, COALESCE((SELECT `name` FROM `category_list` where `music_list`.`category_id` = `category_list`.`id`), 'Unkown Category') as `category_name` FROM `music_list` where `status` = 1 and `delete_flag` = 0 and `audio_path` != ''  {$where} order by `title` asc");
-            while($row = $music_list->fetch_assoc()):
-            ?>
-            <div class="col-lg-4 col-md-6 col-sm-12 col-xs-12 mb-3 cat-items">
-                <div class="card rounded-0 card-outline card-primary  h-100">
-                    <div class="card-img-top music-banner">
-                        <img src="<?= e(validate_image($row['banner_path'])) ?>" alt="<?= e($row['title']) ?>">
-                    </div>
-                    <div class="card-body rounded-0">
-                        <div class="container-fluid">
-                            <div>
-                                <h2 class="rounded-0 card-title-font text-center w-100"><b><?= e($row['title']) ?></b></h2>
-                            </div>
-                            <div>
-                                <div class="truncate">
-                                    <?= nl2br(e(html_entity_decode($row['description'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?>
-                                </div>
-                            </div>
-                            
-                        </div>
-                    </div>
-                    <div class="card-footer text-right">
-                        <div class="row justify-content-end">
-                            <a href="<?= e(base_url.$row['audio_path']) ?>" download="<?= e($row['title'].".".(pathinfo($row['audio_path'], PATHINFO_EXTENSION))) ?>" class="btn btn-sm btn-outline-success rounded-circle p-0 music-btns"><i class="fa fa-download"></i></a>
-                            <a href="javascript:void(0)" data-id="<?= (int) $row['id'] ?>" class="btn btn-sm btn-outline-primary rounded-circle p-0 music-btns play_music"><i class="fa fa-play"></i></a>
-                            <a href="javascript:void(0)" data-id="<?= (int) $row['id'] ?>" class="btn btn-sm btn-outline-info rounded-circle p-0 music-btns view_music_details"><i class="fa fa-info"></i></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endwhile; ?>
-        </div>
-    </div>
-</div>
-<div id="player-field">
-    <div>
-        <div id="player-img-holder">
-            <img src="<?= validate_image("") ?>" alt=""/>
-        </div>
-    </div>
-    <div>
-        <button class="play-btn" id="play" type="button"><i class="fa fa-play"></i></button>
-    </div>
-    <div id="player-slider">
-        <div id="music-title" class="text-light"><span id="title">Music Title</span> - <span class="mx-4 text-muted" id="artist">Test</span></div>
-        <div id="progress-container">
-            <div id="progress"></div>
-        </div>
-        <div id="timer-bar">
-            <span id="timer">0:00</span>
-            <span id="duration"></span>
-        </div>
-    </div>
-    <div id="volume-control" class="px-2">
-        <a href="javascript:void(0)" id="volume-down" class="text-muted mx-2"><i class="fa fa-volume-down"></i></a>
-        <a href="javascript:void(0)" id="volume-up" class="text-muted mx-2"><i class="fa fa-volume-up"></i></a>
-    </div>
-</div>
-<audio src="" class="d-none" id="player-el"></audio>
-<script>
-    const banner_img = document.querySelector('#player-img-holder>img');
-    const disc = document.getElementById('player-el');
-    const title = document.getElementById('title');
-    const artist = document.getElementById('artist');
-    const progressContainer = document.getElementById('progress-container');
-    const progress = document.getElementById('progress');
-    const timer = document.getElementById('timer');
-    const duration = document.getElementById('duration');
-    const play = document.getElementById('play');
-    var volume = .5;
-    disc.volume = volume
-    $(function(){
-        $('#search_cat').on('input change', function(e){
-            e.preventDefault()
-            var _search = $(this).val().toLowerCase()
-
-            $('.cat-items').each(function(e){
-                var _text = $(this).text().toLowerCase()
-                if(_text.includes(_search) === true){
-                    $(this).toggle(true)
-                }else{
-                    $(this).toggle(false)
-                }
-            })
-        })
-        $('.view_music_details').click(function(e){
-            e.preventDefault()
-            var id = $(this).attr('data-id')
-            uni_modal("Music Details", "<?= base_url."view_music.php?id=" ?>"+encodeURIComponent(id),"modal-large")
-        })
-
-        $('.play_music').click(function(e){
-            e.preventDefault()
-            var id = $(this).attr('data-id')
-            start_loader()
-            $.ajax({
-                url:_base_url_+"classes/Master.php?f=get_music_details&id="+id,
-                dataType:"JSON",
-                error: err=>{
-                    alert("There's an error occurred while fetching the audio file.")
-                    end_loader()
-                    console.error(err)
-                    
-                },
-                success:function(resp){
-                    if(typeof resp == 'object'){
-                        loadSong(resp)
-                        end_loader()
-                        $('#player-field').css('display', "flex")
-                    }else{
-                        alert("There's an error occurred while fetching the audio file.")
-                        end_loader()
-                        console.error(resp)
-                    }
-                }
-            })
-        })
-        $('#play').click(function(e){
-            e.preventDefault()
-            playPauseMedia()
-        })
-        $('#volume-down').click(function(e){
-            e.preventDefault()
-            change_volume();
-        })
-        $('#volume-up').click(function(e){
-            e.preventDefault()
-            change_volume("up");
-        })
-    })
-    function loadSong(song) {
-        disc.pause();
-        disc.currentTime = 0;
-        banner_img.src = song.coverPath;
-        disc.src = song.discPath;
-        title.textContent = song.title;
-        artist.textContent = song.artist;
-        disc.addEventListener('loadedmetadata', function updateDuration() {
-            duration.textContent = formatTime(disc.duration);
-        }, { once: true });
-        disc.play().catch(function(error) {
-            console.error('Audio playback could not start:', error);
-            updatePlayPauseIcon();
-        });
-    }
-    function playPauseMedia() {
-        if (disc.paused) {
-            disc.play().catch(function(error) {
-                console.error('Audio playback could not start:', error);
-                updatePlayPauseIcon();
-            });
-        } else {
-            disc.pause();
-        }
-        updatePlayPauseIcon()
-    }
-    // Update icon
-    function updatePlayPauseIcon() {
-        if (disc.paused) {
-            play.querySelector('i').classList.remove('fa-pause');
-            play.querySelector('i').classList.add('fa-play');
-        } else {
-            play.querySelector('i').classList.remove('fa-play');
-            play.querySelector('i').classList.add('fa-pause');
-        }
-    }
-
-    // Update progress bar
-    function updateProgress() {
-        if (!Number.isFinite(disc.duration) || disc.duration <= 0) return;
-        progress.style.width = (disc.currentTime / disc.duration) * 100 + '%';
-        timer.textContent = formatTime(disc.currentTime);
-    }
-
-    function formatTime(seconds) {
-        if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = Math.floor(seconds % 60);
-        return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
-    }
-
-    // Reset the progress
-    function resetProgress() {
-        progress.style.width = 0 + '%';
-        timer.textContent = '0:00';
-    }
-    // Navigate song slider
-function progressSlider(ev) {
-    if (!Number.isFinite(disc.duration) || disc.duration <= 0 || this.clientWidth <= 0) return;
-    var is_playing = !disc.paused
-    if (is_playing)
-        disc.pause()
-    const totalWidth = this.clientWidth;
-    const clickWidth = ev.offsetX;
-    const clickWidthRatio = clickWidth / totalWidth;
-    disc.currentTime = Math.max(0, Math.min(1, clickWidthRatio)) * disc.duration;
-    if (is_playing)
-        disc.play()
-    document.addEventListener('mousemove', slideMoving);
-    document.addEventListener('mouseup', function() {
-        if (is_playing)
-            disc.play()
-        document.removeEventListener('mousemove', slideMoving);
-    });
-
-}
-
-function change_volume($dir = "down"){
-        var vol = volume * 10
-    if($dir == "down"){
-        vol--;
-        if(vol <= 0)
-        vol = 0;
-    }else{
-        vol++;
-        if(vol >= 10)
-        vol = 10;
-    }
-    volume = vol / 10
-        disc.volume = volume
-}
-
-    // Navigate song slider while moving
-    function slideMoving(ev) {
-        if (!Number.isFinite(disc.duration) || disc.duration <= 0 || progressContainer.clientWidth <= 0) return;
-        var is_playing = !disc.paused
-        if (is_playing)
-            disc.pause()
-        const totalWidth = progressContainer.clientWidth;
-        const clickWidth = ev.offsetX;
-        const clickWidthRatio = clickWidth / totalWidth;
-        disc.currentTime = Math.max(0, Math.min(1, clickWidthRatio)) * disc.duration;
-        if (is_playing)
-            disc.play()
-    }
-    function song_ended(){
-        $('#player-field').hide()
-        console.log('audio ended')
-    }
-
-    // Various events on disc
-    disc.addEventListener('play', updatePlayPauseIcon);
-    disc.addEventListener('pause', updatePlayPauseIcon);
-    disc.addEventListener('timeupdate', updateProgress);
-    disc.addEventListener('ended', song_ended);
-
-
-    // Move to different place in the song
-    progressContainer.addEventListener('mousedown', progressSlider);
-</script>
+<p class="empty-search" id="track-empty" hidden>No tracks match that search. Try a different title or artist.</p>
+<?php else: ?>
+<div class="empty-state"><span class="empty-icon"><i class="fas fa-compact-disc" aria-hidden="true"></i></span><h2>No playable tracks yet.</h2><p>Tracks appear here after an audio file is added and the track is active.</p></div>
+<?php endif; ?>
+<?php else: ?>
+<div class="empty-state"><span class="empty-icon"><i class="fas fa-map-signs" aria-hidden="true"></i></span><h2>That genre isn’t here.</h2><p>It may have been removed or turned off. Browse the active genres to find another sound.</p><a class="button button-primary" href="<?= e(base_url) ?>?page=categories">Browse genres <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+<?php endif; ?>

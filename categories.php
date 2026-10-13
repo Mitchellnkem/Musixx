@@ -1,65 +1,29 @@
+<?php
+$categoryList = $conn->query("SELECT id, name, description FROM category_list
+    WHERE status = 1 AND delete_flag = 0 ORDER BY name ASC")->fetch_all(MYSQLI_ASSOC);
+?>
+<section class="page-intro">
+    <p class="eyebrow eyebrow-dark">PICK A DIRECTION</p>
+    <div class="page-intro-row"><div><h1>Find your <em>frequency.</em></h1><p>Choose a genre and follow the sound wherever it takes you.</p></div><span class="intro-count"><?= count($categoryList) ?><small>genres</small></span></div>
+</section>
 
-<div class="row">
-    <div class="col-lg-6 col-md-8 col-sm-12 col-xs-12 mx-auto mt-5 mb-3 ">
-        <h1 class="text-center font-weight-bolder title-font">Music Categories</h1>
-        <hr class="mx-auto bg-primary opacity-100" style="height:2px;opacity:1;width:20%">
-    </div>
+<section class="browse-tools" aria-label="Find a genre">
+    <label class="search-box"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="genre-search" placeholder="Search genres" aria-label="Search genres"><kbd>/</kbd></label>
+    <span class="results-caption" id="genre-results"><?= count($categoryList) ?> <?= count($categoryList) === 1 ? 'genre' : 'genres' ?></span>
+</section>
+
+<?php if ($categoryList): ?>
+<div class="genre-grid genre-grid-light" id="genre-grid">
+    <?php foreach ($categoryList as $index => $category): ?>
+    <a class="genre-card" href="<?= e(base_url.'?page=music_list&cid='.(int) $category['id']) ?>" data-search-item>
+        <span class="genre-card-top"><span class="genre-number"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="genre-arrow"><i class="fas fa-arrow-right" aria-hidden="true"></i></span></span>
+        <span class="genre-name"><?= e($category['name']) ?></span>
+        <span class="genre-description"><?= e($category['description']) ?></span>
+        <span class="genre-explore">Explore this sound <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+    </a>
+    <?php endforeach; ?>
 </div>
-
-<div class="row">
-    <div class="col-lg-6 col-md-8 col-sm-12 col-xs-12 mx-auto mb-5">
-        <div class="input-group mb-3">
-            <input type="search" id="search_cat"  placeholder="Search Here"  class="form-control">
-            <div class="input-group-append">
-                <span class="input-group-text"><i class="fas fa-search"></i></span>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mx-auto mb-5">
-        <div class="row">
-            <?php 
-            $category_list = $conn->query("SELECT * FROM `category_list` where `status` = 1 and `delete_flag` = 0 order by `name` asc");
-            while($row = $category_list->fetch_assoc()):
-            ?>
-            <div class="col-lg-4 col-md-6 col-sm-12 col-xs-12 mb-3 cat-items">
-                <div class="card rounded-0 card-outline card-primary  h-100">
-                    <div class="card-header rounded-0">
-                        <div class="card-title rounded-0 card-title-font"><b><?= e($row['name']) ?></b></div>
-                    </div>
-                    <div class="card-body rounded-0">
-                        <div class="container-fluid">
-                            <div class=" truncate">
-                                <?= nl2br(e(html_entity_decode($row['description'], ENT_QUOTES | ENT_HTML5, 'UTF-8')), false) ?>
-                            </div>
-                            
-                        </div>
-                    </div>
-                    <div class="card-footer text-right">
-                        <a href="<?= base_url."?page=music_list&cid={$row['id']}" ?>" class="btn btn-sm btn-flat btn-primary bg-gradient-primary">View Category</a>
-                    </div>
-                </div>
-            </div>
-            <?php endwhile; ?>
-        </div>
-    </div>
-</div>
-
-<script>
-    $(function(){
-        $('#search_cat').on('input change', function(e){
-            e.preventDefault()
-            var _search = $(this).val().toLowerCase()
-
-            $('.cat-items').each(function(e){
-                var _text = $(this).text().toLowerCase()
-                if(_text.includes(_search) === true){
-                    $(this).toggle(true)
-                }else{
-                    $(this).toggle(false)
-                }
-            })
-        })
-    })
-</script>
+<p class="empty-search" id="genre-empty" hidden>No genres match that search. Try another word.</p>
+<?php else: ?>
+<div class="empty-state"><span class="empty-icon"><i class="fas fa-headphones-alt" aria-hidden="true"></i></span><h2>Genres are on their way.</h2><p>There aren’t any active genres to explore just yet.</p></div>
+<?php endif; ?>

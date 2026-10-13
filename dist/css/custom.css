@@ -207,6 +207,91 @@ a.card.product-item:hover .product-cover {
 .dark-mode .note-btn.btn-light {
     color: inherit;
 }
+
+/* Musixx admin surfaces */
+body.hold-transition {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f3eb;
+    color: #152018;
+}
+.main-sidebar.sidebar-dark-purple {
+    background: #17251d;
+}
+.sidebar-dark-purple .brand-link {
+    background: #17251d !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+.sidebar-dark-purple .nav-sidebar > .nav-item > .nav-link.active,
+.sidebar-dark-purple .nav-sidebar > .nav-item > .nav-link.active:hover {
+    color: #152018;
+    background: #d4f26a;
+    box-shadow: none;
+}
+.sidebar-dark-purple .nav-sidebar .nav-link:hover:not(.active) {
+    color: #fff;
+    background: rgba(255, 255, 255, .09);
+}
+.main-header.navbar-dark {
+    background: #fffefa;
+    border-bottom: 1px solid rgba(21, 32, 24, .08);
+}
+.main-header.navbar-dark .nav-link,
+.main-header.navbar-dark .navbar-nav .nav-link {
+    color: #526055;
+}
+.content-wrapper {
+    background: #f4f3eb;
+}
+.content-header h1,
+.card-title {
+    color: #152018;
+    font-weight: 750;
+    letter-spacing: -.035em;
+}
+.card.card-outline {
+    border-top: 0;
+}
+.card {
+    border: 1px solid rgba(21, 32, 24, .08);
+    border-radius: 15px;
+    box-shadow: 0 10px 28px rgba(21, 32, 24, .055);
+}
+.card-header,
+.card-footer {
+    background: transparent;
+    border-color: rgba(21, 32, 24, .08);
+}
+.btn-primary,
+.bg-primary,
+.bg-gradient-primary {
+    color: #152018 !important;
+    background: #d4f26a !important;
+    border-color: #d4f26a !important;
+    box-shadow: none !important;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    color: #152018 !important;
+    background: #e1ff8c !important;
+    border-color: #e1ff8c !important;
+}
+.form-control:focus {
+    border-color: #98ad59;
+    box-shadow: 0 0 0 .2rem rgba(152, 173, 89, .18);
+}
+.table thead th {
+    color: #667263;
+    background: #f4f3eb;
+    border-bottom: 1px solid rgba(21, 32, 24, .1);
+    font-size: .72rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.main-footer {
+    color: #778073;
+    background: #fffefa;
+    border-top: 1px solid rgba(21, 32, 24, .08);
+}
 /* 
 .btn-primary{
     background-color: #2fcd9f;
